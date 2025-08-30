@@ -1,0 +1,22 @@
+name: material_wavy_progress_indicator
+description: "Material 3 Wavy Progress Indicator"
+publish_to: "none"
+version: 1.0.0
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^7.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/og-image.png
