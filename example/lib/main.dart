@@ -104,6 +104,15 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
                       );
                     },
                   ),
+                  const WavyCircularProgressIndicator(),
+                  AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, _) {
+                      return WavyCircularProgressIndicator(
+                        value: _animation.value,
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
