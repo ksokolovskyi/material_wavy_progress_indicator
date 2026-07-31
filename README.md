@@ -1,6 +1,8 @@
 # Material Wavy Progress Indicator
 
-https://github.com/user-attachments/assets/5d489405-d87f-48b4-9d39-803993e751bc
+| `WavyLinearProgressIndicator` | `WavyCircularProgressIndicator` |
+| - | - |
+| <video src="https://github.com/user-attachments/assets/47e108d4-87e3-41db-8df7-33fda1b49aa7"/> | <video src="https://github.com/user-attachments/assets/a2fd4d56-96f7-41fa-bbd7-1befd1c730eb"/> |
 
 A [Flutter][flutter] implementation of the [Material 3 Wavy Progress Indicator][material-progress-indicator] component.
 
