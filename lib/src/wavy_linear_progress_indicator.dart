@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:material_wavy_progress_indicator/src/end_blocks.dart';
 import 'package:material_wavy_progress_indicator/src/wavy_linear_progress_indicator_theme.dart';
 
 const double _kFullAmplitudeProgressMin = 0.1;
@@ -201,14 +202,27 @@ class WavyLinearProgressIndicator extends StatefulWidget {
   /// how far along they are.
   ///
   /// For determinate progress indicators, this will be defaulted to
-  /// [ProgressIndicator.value] expressed as a percentage, i.e. `0.1` will
-  /// become `10%`.
+  /// [WavyLinearProgressIndicator.value] expressed as a percentage, i.e.
+  /// `0.1` will become `10%`.
   /// {@endtemplate}
   final String? semanticsValue;
 
   @override
   State<WavyLinearProgressIndicator> createState() =>
       _WavyLinearProgressIndicatorState();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(
+      PercentProperty(
+        'value',
+        value,
+        showName: false,
+        ifNull: '<indeterminate>',
+      ),
+    );
+  }
 }
 
 class _WavyLinearProgressIndicatorState
@@ -301,8 +315,8 @@ class _WavyLinearProgressIndicatorState
   void dispose() {
     _waveOffsetController.dispose();
     _waveOffset.dispose();
-    _amplitudeFractionController.dispose();
     _amplitudeFraction.dispose();
+    _amplitudeFractionController.dispose();
     _indeterminateValueController.dispose();
 
     super.dispose();
@@ -358,7 +372,8 @@ class _WavyLinearProgressIndicatorState
             _waveOffsetController.duration != null) {
           unawaited(_waveOffsetController.repeat());
         }
-        if (!_amplitudeFractionController.isAnimating) {
+        if (!_amplitudeFractionController.isAnimating &&
+            !_amplitudeFractionController.isCompleted) {
           unawaited(_amplitudeFractionController.forward());
         }
       } else {
@@ -446,19 +461,6 @@ class _WavyLinearProgressIndicatorState
             textDirection: Directionality.of(context),
           ),
         ),
-      ),
-    );
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    properties.add(
-      PercentProperty(
-        'value',
-        _effectiveValue,
-        showName: false,
-        ifNull: '<indeterminate>',
       ),
     );
   }
@@ -593,7 +595,7 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
   late final Paint _strokePaint = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = strokeWidth
-    ..strokeCap = _usesStrokeCap(cornerRadius, strokeWidth)
+    ..strokeCap = usesStrokeCap(cornerRadius, strokeWidth)
         ? StrokeCap.round
         : StrokeCap.butt;
 
@@ -666,7 +668,7 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
 
       _fillPaint.color = stopIndicatorColor;
 
-      if (_usesStrokeCap(cornerRadius, strokeWidth)) {
+      if (usesStrokeCap(cornerRadius, strokeWidth)) {
         canvas.drawCircle(position, radius, _fillPaint);
       } else {
         // The corners are rounded by the same ratio as the ones of the active
@@ -696,7 +698,7 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
     }
   }
 
-  void _drawEndBlocks(Canvas canvas, _EndBlocks blocks, Color color) {
+  void _drawEndBlocks(Canvas canvas, EndBlocks blocks, Color color) {
     if (blocks.length == 0) {
       return;
     }
@@ -731,63 +733,6 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
         oldDelegate.wavelength != wavelength ||
         oldDelegate.waveOffset != waveOffset ||
         oldDelegate.textDirection != textDirection;
-  }
-}
-
-/// Whether the ends of the drawn segments can be rendered with a round
-/// [StrokeCap] instead of the [_EndBlocks].
-bool _usesStrokeCap(double cornerRadius, double strokeWidth) =>
-    cornerRadius >= strokeWidth / 2;
-
-/// A rounded block which is drawn at an end of a progress or a track segment
-/// to round its corners.
-class _EndBlock {
-  double x = 0;
-
-  double y = 0;
-
-  /// The rotation in radians, matching the direction of the segment at this
-  /// end.
-  double rotation = 0;
-
-  /// The uniform scale of the block, used to shrink the segments which are too
-  /// short to hold two blocks.
-  double scale = 1;
-}
-
-/// A pool of [_EndBlock]s which reuses its entries between the updates to keep
-/// the drawing updates allocation free.
-class _EndBlocks {
-  final _blocks = <_EndBlock>[];
-
-  var _length = 0;
-
-  int get length => _length;
-
-  _EndBlock operator [](int index) {
-    assert(index < _length, 'index is out of range.');
-    return _blocks[index];
-  }
-
-  void add({
-    required double x,
-    required double y,
-    double rotation = 0,
-    double scale = 1,
-  }) {
-    if (_length == _blocks.length) {
-      _blocks.add(_EndBlock());
-    }
-
-    _blocks[_length++]
-      ..x = x
-      ..y = y
-      ..rotation = rotation
-      ..scale = scale;
-  }
-
-  void reset() {
-    _length = 0;
   }
 }
 
@@ -837,7 +782,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
   final trackPathToDraw = Path();
 
   /// The blocks that round the ends of the track segments.
-  final trackBlocksToDraw = _EndBlocks();
+  final trackBlocksToDraw = EndBlocks();
 
   /// A [Path] that represents the current progress and will be used to draw
   /// it. This path is derived from the [_fullProgressPath] and should be
@@ -845,7 +790,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
   List<Path>? progressPathsToDraw;
 
   /// The blocks that round the ends of the progress segments.
-  final progressBlocksToDraw = _EndBlocks();
+  final progressBlocksToDraw = EndBlocks();
 
   /// Creates or updates the progress path, and caches it to avoid redundant
   /// updates before updating the draw paths according to the progress.
@@ -1081,10 +1026,10 @@ class _WavyLinearProgressIndicatorDrawingCache {
 
     final cornerRadius = _currentCornerRadius;
     final cornerDiameter = cornerRadius * 2;
-    final usesStrokeCap = _usesStrokeCap(cornerRadius, _currentStrokeWidth);
+    final roundedByStrokeCap = usesStrokeCap(cornerRadius, _currentStrokeWidth);
     // The end blocks are only needed when the round stroke cap can't round the
     // segment ends on its own.
-    final needsEndBlocks = !usesStrokeCap && cornerRadius > 0;
+    final needsEndBlocks = !roundedByStrokeCap && cornerRadius > 0;
 
     final trackGapFraction = _currentTrackGap / width;
     final waveShift = waveOffset * _currentWavelength;
@@ -1130,7 +1075,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
       final length = head - tail;
 
       if (length < cornerDiameter) {
-        if (usesStrokeCap || length <= 0) {
+        if (roundedByStrokeCap || length <= 0) {
           return;
         }
 
@@ -1190,7 +1135,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
       final length = head - tail;
 
       if (length < cornerDiameter) {
-        if (usesStrokeCap || length <= 0) {
+        if (roundedByStrokeCap || length <= 0) {
           return;
         }
 

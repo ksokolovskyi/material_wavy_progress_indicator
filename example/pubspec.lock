@@ -99,6 +99,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.0"
+  material_shapes:
+    dependency: transitive
+    description:
+      path: "."
+      ref: HEAD
+      resolved-ref: "12ee853fbb4b5987dbbfe9bffc19fede57cd0295"
+      url: "https://github.com/ksokolovskyi/material_shapes.git"
+    source: git
+    version: "1.0.0"
   material_wavy_progress_indicator:
     dependency: "direct main"
     description:
@@ -201,4 +210,4 @@ packages:
     version: "15.2.0"
 sdks:
   dart: ">=3.12.2 <4.0.0"
-  flutter: ">=3.18.0-18.0.pre.54"
+  flutter: ">=3.22.0"

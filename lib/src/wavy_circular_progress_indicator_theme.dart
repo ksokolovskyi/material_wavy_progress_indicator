@@ -2,47 +2,46 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:material_wavy_progress_indicator/src/wavy_linear_progress_indicator.dart';
+import 'package:material_wavy_progress_indicator/src/wavy_circular_progress_indicator.dart';
 
-/// Defines the visual properties of [WavyLinearProgressIndicator] widgets.
+/// Defines the visual properties of [WavyCircularProgressIndicator] widgets.
 ///
-/// Used by [WavyLinearProgressIndicatorTheme] to control the visual properties
-/// of wavy linear progress indicators in a widget subtree.
+/// Used by [WavyCircularProgressIndicatorTheme] to control the visual
+/// properties of wavy circular progress indicators in a widget subtree.
 ///
-/// To obtain this configuration, use [WavyLinearProgressIndicatorTheme.of] to
-/// access the closest ancestor [WavyLinearProgressIndicatorTheme] of the
+/// To obtain this configuration, use [WavyCircularProgressIndicatorTheme.of] to
+/// access the closest ancestor [WavyCircularProgressIndicatorTheme] of the
 /// current [BuildContext].
 ///
 /// See also:
 ///
-///  * [WavyLinearProgressIndicatorTheme], an [InheritedWidget] that propagates
-/// the theme down its subtree.
+///  * [WavyCircularProgressIndicatorTheme], an [InheritedWidget] that
+/// propagates the theme down its subtree.
 @immutable
-class WavyLinearProgressIndicatorThemeData with Diagnosticable {
+class WavyCircularProgressIndicatorThemeData with Diagnosticable {
   /// Creates the set of properties used to configure
-  /// [WavyLinearProgressIndicator] widgets.
-  const WavyLinearProgressIndicatorThemeData({
+  /// [WavyCircularProgressIndicator] widgets.
+  const WavyCircularProgressIndicatorThemeData({
     this.color,
     this.trackColor,
-    this.stopIndicatorColor,
+    this.size,
     this.strokeWidth,
     this.cornerRadius,
-    this.stopIndicatorWidth,
     this.trackGap,
     this.amplitude,
     this.wavelength,
     this.waveSpeed,
   }) : assert(
+         size == null || size > 0,
+         'size has to be greater than zero.',
+       ),
+       assert(
          strokeWidth == null || strokeWidth > 0,
          'strokeWidth has to be greater than zero.',
        ),
        assert(
          cornerRadius == null || cornerRadius >= 0,
          'cornerRadius must not be negative.',
-       ),
-       assert(
-         stopIndicatorWidth == null || stopIndicatorWidth > 0,
-         'stopIndicatorWidth has to be greater than zero.',
        ),
        assert(
          trackGap == null || trackGap >= 0,
@@ -61,57 +60,52 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
          'waveSpeed must not be negative.',
        );
 
-  /// {@macro flutter.material.WavyLinearProgressIndicator.color}
+  /// {@macro flutter.material.WavyCircularProgressIndicator.color}
   final Color? color;
 
-  /// {@macro flutter.material.WavyLinearProgressIndicator.trackColor}
+  /// {@macro flutter.material.WavyCircularProgressIndicator.trackColor}
   final Color? trackColor;
 
-  /// {@macro flutter.material.WavyLinearProgressIndicator.stopIndicatorColor}
-  final Color? stopIndicatorColor;
+  /// {@macro flutter.material.WavyCircularProgressIndicator.size}
+  final double? size;
 
-  /// {@macro flutter.material.WavyLinearProgressIndicator.strokeWidth}
+  /// {@macro flutter.material.WavyCircularProgressIndicator.strokeWidth}
   final double? strokeWidth;
 
-  /// {@macro flutter.material.WavyLinearProgressIndicator.cornerRadius}
+  /// {@macro flutter.material.WavyCircularProgressIndicator.cornerRadius}
   final double? cornerRadius;
 
-  /// {@macro flutter.material.WavyLinearProgressIndicator.stopIndicatorWidth}
-  final double? stopIndicatorWidth;
-
-  /// {@macro flutter.material.WavyLinearProgressIndicator.trackGap}
+  /// {@macro flutter.material.WavyCircularProgressIndicator.trackGap}
   final double? trackGap;
 
-  /// {@macro flutter.material.WavyLinearProgressIndicator.amplitude}
+  /// {@macro flutter.material.WavyCircularProgressIndicator.amplitude}
   final double? amplitude;
 
-  /// {@macro flutter.material.WavyLinearProgressIndicator.wavelength}
+  /// {@macro flutter.material.WavyCircularProgressIndicator.wavelength}
   final double? wavelength;
 
-  /// {@macro flutter.material.WavyLinearProgressIndicator.waveSpeed}
+  /// {@macro flutter.material.WavyCircularProgressIndicator.waveSpeed}
   final double? waveSpeed;
 
   /// Creates a copy of this object but with the given fields replaced with the
   /// new values.
-  WavyLinearProgressIndicatorThemeData copyWith({
+  WavyCircularProgressIndicatorThemeData copyWith({
     Color? color,
     Color? trackColor,
-    Color? stopIndicatorColor,
+    double? size,
     double? strokeWidth,
     double? cornerRadius,
-    double? stopIndicatorWidth,
     double? trackGap,
     double? amplitude,
     double? wavelength,
     double? waveSpeed,
   }) {
-    return WavyLinearProgressIndicatorThemeData(
+    return WavyCircularProgressIndicatorThemeData(
       color: color ?? this.color,
       trackColor: trackColor ?? this.trackColor,
-      stopIndicatorColor: stopIndicatorColor ?? this.stopIndicatorColor,
+      size: size ?? this.size,
       strokeWidth: strokeWidth ?? this.strokeWidth,
       cornerRadius: cornerRadius ?? this.cornerRadius,
-      stopIndicatorWidth: stopIndicatorWidth ?? this.stopIndicatorWidth,
       trackGap: trackGap ?? this.trackGap,
       amplitude: amplitude ?? this.amplitude,
       wavelength: wavelength ?? this.wavelength,
@@ -119,36 +113,23 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
     );
   }
 
-  /// Linearly interpolate between two wavy linear progress indicator themes.
+  /// Linearly interpolate between two wavy circular progress indicator themes.
   ///
   /// If both arguments are null, then null is returned.
-  static WavyLinearProgressIndicatorThemeData? lerp(
-    WavyLinearProgressIndicatorThemeData? a,
-    WavyLinearProgressIndicatorThemeData? b,
+  static WavyCircularProgressIndicatorThemeData? lerp(
+    WavyCircularProgressIndicatorThemeData? a,
+    WavyCircularProgressIndicatorThemeData? b,
     double t,
   ) {
     if (identical(a, b)) {
       return a;
     }
-    return WavyLinearProgressIndicatorThemeData(
-      color: Color.lerp(
-        a?.color,
-        b?.color,
-        t,
-      ),
+    return WavyCircularProgressIndicatorThemeData(
+      color: Color.lerp(a?.color, b?.color, t),
       trackColor: Color.lerp(a?.trackColor, b?.trackColor, t),
-      stopIndicatorColor: Color.lerp(
-        a?.stopIndicatorColor,
-        b?.stopIndicatorColor,
-        t,
-      ),
+      size: lerpDouble(a?.size, b?.size, t),
       strokeWidth: lerpDouble(a?.strokeWidth, b?.strokeWidth, t),
       cornerRadius: lerpDouble(a?.cornerRadius, b?.cornerRadius, t),
-      stopIndicatorWidth: lerpDouble(
-        a?.stopIndicatorWidth,
-        b?.stopIndicatorWidth,
-        t,
-      ),
       trackGap: lerpDouble(a?.trackGap, b?.trackGap, t),
       amplitude: lerpDouble(a?.amplitude, b?.amplitude, t),
       wavelength: lerpDouble(a?.wavelength, b?.wavelength, t),
@@ -160,10 +141,9 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
   int get hashCode => Object.hash(
     color,
     trackColor,
-    stopIndicatorColor,
+    size,
     strokeWidth,
     cornerRadius,
-    stopIndicatorWidth,
     trackGap,
     amplitude,
     wavelength,
@@ -178,13 +158,12 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
     if (other.runtimeType != runtimeType) {
       return false;
     }
-    return other is WavyLinearProgressIndicatorThemeData &&
+    return other is WavyCircularProgressIndicatorThemeData &&
         other.color == color &&
         other.trackColor == trackColor &&
-        other.stopIndicatorColor == stopIndicatorColor &&
+        other.size == size &&
         other.strokeWidth == strokeWidth &&
         other.cornerRadius == cornerRadius &&
-        other.stopIndicatorWidth == stopIndicatorWidth &&
         other.trackGap == trackGap &&
         other.amplitude == amplitude &&
         other.wavelength == wavelength &&
@@ -197,22 +176,9 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
     properties
       ..add(ColorProperty('color', color, defaultValue: null))
       ..add(ColorProperty('trackColor', trackColor, defaultValue: null))
-      ..add(
-        ColorProperty(
-          'stopIndicatorColor',
-          stopIndicatorColor,
-          defaultValue: null,
-        ),
-      )
+      ..add(DoubleProperty('size', size, defaultValue: null))
       ..add(DoubleProperty('strokeWidth', strokeWidth, defaultValue: null))
       ..add(DoubleProperty('cornerRadius', cornerRadius, defaultValue: null))
-      ..add(
-        DoubleProperty(
-          'stopIndicatorWidth',
-          stopIndicatorWidth,
-          defaultValue: null,
-        ),
-      )
       ..add(DoubleProperty('trackGap', trackGap, defaultValue: null))
       ..add(DoubleProperty('amplitude', amplitude, defaultValue: null))
       ..add(DoubleProperty('wavelength', wavelength, defaultValue: null))
@@ -221,57 +187,59 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
 }
 
 /// An inherited widget that defines the configuration for
-/// [WavyLinearProgressIndicator]s in this widget's subtree.
+/// [WavyCircularProgressIndicator]s in this widget's subtree.
 ///
-/// Values specified here are used for [WavyLinearProgressIndicator] properties
-/// that are not given an explicit non-null value.
+/// Values specified here are used for [WavyCircularProgressIndicator]
+/// properties that are not given an explicit non-null value.
 ///
 /// {@tool snippet}
 ///
-/// Here is an example of a wavy linear progress indicator theme that applies a
-/// red active indicator color.
+/// Here is an example of a wavy circular progress indicator theme that applies
+/// a red active indicator color.
 ///
 /// ```dart
-/// const WavyLinearProgressIndicatorTheme(
-///   data: WavyLinearProgressIndicatorThemeData(
+/// const WavyCircularProgressIndicatorTheme(
+///   data: WavyCircularProgressIndicatorThemeData(
 ///     color: Colors.red,
 ///   ),
-///   child: WavyLinearProgressIndicator(),
+///   child: WavyCircularProgressIndicator(),
 /// )
 /// ```
 /// {@end-tool}
-class WavyLinearProgressIndicatorTheme extends InheritedTheme {
+class WavyCircularProgressIndicatorTheme extends InheritedTheme {
   /// Creates a theme that controls the configurations for
-  /// [WavyLinearProgressIndicator] widgets.
-  const WavyLinearProgressIndicatorTheme({
+  /// [WavyCircularProgressIndicator] widgets.
+  const WavyCircularProgressIndicatorTheme({
     required this.data,
     required super.child,
     super.key,
   });
 
-  /// The properties for descendant [WavyLinearProgressIndicator] widgets.
-  final WavyLinearProgressIndicatorThemeData data;
+  /// The properties for descendant [WavyCircularProgressIndicator] widgets.
+  final WavyCircularProgressIndicatorThemeData data;
 
-  /// Returns the [data] from the closest [WavyLinearProgressIndicatorTheme]
+  /// Returns the [data] from the closest [WavyCircularProgressIndicatorTheme]
   /// ancestor. If there is no ancestor, it returns null.
   ///
   /// Typical usage is as follows:
   ///
   /// ```dart
-  /// WavyLinearProgressIndicatorThemeData? theme = WavyLinearProgressIndicatorTheme.of(context);
+  /// WavyCircularProgressIndicatorThemeData? theme = WavyCircularProgressIndicatorTheme.of(context);
   /// ```
-  static WavyLinearProgressIndicatorThemeData? of(BuildContext context) {
+  static WavyCircularProgressIndicatorThemeData? of(BuildContext context) {
     return context
-        .dependOnInheritedWidgetOfExactType<WavyLinearProgressIndicatorTheme>()
+        .dependOnInheritedWidgetOfExactType<
+          WavyCircularProgressIndicatorTheme
+        >()
         ?.data;
   }
 
   @override
   Widget wrap(BuildContext context, Widget child) {
-    return WavyLinearProgressIndicatorTheme(data: data, child: child);
+    return WavyCircularProgressIndicatorTheme(data: data, child: child);
   }
 
   @override
-  bool updateShouldNotify(WavyLinearProgressIndicatorTheme oldWidget) =>
+  bool updateShouldNotify(WavyCircularProgressIndicatorTheme oldWidget) =>
       data != oldWidget.data;
 }

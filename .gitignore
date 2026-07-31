@@ -33,6 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Written by the golden tests when a rendering doesn't match its golden file.
+/test/failures/
+
 # Symbolication related
 app.*.symbols
 

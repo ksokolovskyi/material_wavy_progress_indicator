@@ -306,6 +306,98 @@ void main() {
       });
     });
 
+    group('property changes', () {
+      // The drawing cache is mutated in place and reused across builds, so
+      // every property has to invalidate it on its own. A property is changed
+      // on a mounted indicator, the way a hot reload does, and has to land on
+      // exactly what a fresh mount of it renders.
+      Widget buildIndicator({
+        Color? color,
+        Color? trackColor,
+        Color? stopIndicatorColor,
+        double? strokeWidth,
+        double? cornerRadius,
+        double? stopIndicatorWidth,
+        double? trackGap,
+        double? amplitude,
+        double? wavelength,
+        double value = 0.5,
+      }) {
+        return WavyLinearProgressIndicator(
+          value: value,
+          color: color,
+          trackColor: trackColor,
+          stopIndicatorColor: stopIndicatorColor,
+          strokeWidth: strokeWidth,
+          cornerRadius: cornerRadius,
+          stopIndicatorWidth: stopIndicatorWidth,
+          trackGap: trackGap,
+          amplitude: amplitude,
+          wavelength: wavelength,
+          waveSpeed: 0,
+        );
+      }
+
+      final changes = <String, (Widget, Widget)>{
+        'color': (
+          buildIndicator(color: const Color(0xFF0000FF)),
+          buildIndicator(color: const Color(0xFF00FF00)),
+        ),
+        'trackColor': (
+          buildIndicator(trackColor: const Color(0xFFEEEEEE)),
+          buildIndicator(trackColor: const Color(0xFF999999)),
+        ),
+        'stopIndicatorColor': (
+          buildIndicator(stopIndicatorColor: const Color(0xFFFF0000)),
+          buildIndicator(stopIndicatorColor: const Color(0xFF000000)),
+        ),
+        'strokeWidth': (
+          buildIndicator(strokeWidth: 4),
+          buildIndicator(strokeWidth: 14),
+        ),
+        'cornerRadius': (
+          buildIndicator(strokeWidth: 14, cornerRadius: 0),
+          buildIndicator(strokeWidth: 14, cornerRadius: 7),
+        ),
+        // The stop indicator is clamped to the stroke, so the stroke is widened
+        // to leave the two widths room to differ.
+        'stopIndicatorWidth': (
+          buildIndicator(strokeWidth: 14, stopIndicatorWidth: 4),
+          buildIndicator(strokeWidth: 14, stopIndicatorWidth: 12),
+        ),
+        'trackGap': (buildIndicator(trackGap: 2), buildIndicator(trackGap: 16)),
+        'amplitude': (
+          buildIndicator(amplitude: 3),
+          buildIndicator(amplitude: 10),
+        ),
+        'wavelength': (
+          buildIndicator(wavelength: 20),
+          buildIndicator(wavelength: 60),
+        ),
+        'value': (buildIndicator(), buildIndicator(value: 0.7)),
+      };
+
+      for (final MapEntry(key: property, value: (before, after))
+          in changes.entries) {
+        testWidgets('applies a $property change to a mounted indicator', (
+          tester,
+        ) async {
+          await tester.pumpWidget(buildScene(before));
+          await tester.pump(const Duration(milliseconds: 600));
+          final rendered = await capture(tester);
+
+          // Keeps the state, so that the indicator is updated rather than
+          // rebuilt from scratch.
+          await tester.pumpWidget(buildScene(after));
+          await tester.pump(const Duration(milliseconds: 600));
+          final updated = await capture(tester);
+
+          expect(listEquals(rendered, updated), isFalse);
+          expect(listEquals(updated, await render(tester, after)), isTrue);
+        });
+      }
+    });
+
     group('text direction', () {
       // The rasterization of the curved edges is not perfectly symmetric, so
       // the mirrored renderings are only compared up to a fraction of a color
