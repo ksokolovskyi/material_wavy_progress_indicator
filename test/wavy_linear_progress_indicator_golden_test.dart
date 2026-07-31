@@ -79,7 +79,7 @@ void main() {
     Future<void> expectGolden(WidgetTester tester, String name) {
       return expectLater(
         find.byKey(goldenKey),
-        matchesGoldenFile('goldens/$name.png'),
+        matchesGoldenFile('goldens/linear_$name.png'),
       );
     }
 
