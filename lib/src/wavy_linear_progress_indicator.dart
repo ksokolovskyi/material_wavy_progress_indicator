@@ -38,6 +38,7 @@ class WavyLinearProgressIndicator extends StatefulWidget {
     this.trackColor,
     this.stopIndicatorColor,
     this.strokeWidth,
+    this.cornerRadius,
     this.stopIndicatorWidth,
     this.trackGap,
     this.amplitude,
@@ -49,6 +50,10 @@ class WavyLinearProgressIndicator extends StatefulWidget {
   }) : assert(
          strokeWidth == null || strokeWidth > 0,
          'strokeWidth has to be greater than zero.',
+       ),
+       assert(
+         cornerRadius == null || cornerRadius >= 0,
+         'cornerRadius must not be negative.',
        ),
        assert(
          stopIndicatorWidth == null || stopIndicatorWidth > 0,
@@ -117,6 +122,18 @@ class WavyLinearProgressIndicator extends StatefulWidget {
   /// be used.
   /// If that is null, then defaults to 4.
   final double? strokeWidth;
+
+  /// {@template flutter.material.WavyLinearProgressIndicator.cornerRadius}
+  /// The radius of the rounded corners of the active indicator and the track.
+  /// {@endtemplate}
+  ///
+  /// Clamped to `strokeWidth / 2`.
+  ///
+  /// If null, then the [WavyLinearProgressIndicatorThemeData.cornerRadius] will
+  /// be used.
+  /// If that is null, then defaults to `strokeWidth / 2`, which produces fully
+  /// rounded ends.
+  final double? cornerRadius;
 
   /// {@template flutter.material.WavyLinearProgressIndicator.stopIndicatorWidth}
   /// The width of the stop indicator.
@@ -372,6 +389,12 @@ class _WavyLinearProgressIndicatorState
         widget.strokeWidth ??
         indicatorTheme?.strokeWidth ??
         defaults.strokeWidth;
+    final effectiveCornerRadius = math.min(
+      widget.cornerRadius ??
+          indicatorTheme?.cornerRadius ??
+          effectiveStrokeWidth / 2,
+      effectiveStrokeWidth / 2,
+    );
     final effectiveStopIndicatorWidth =
         widget.stopIndicatorWidth ??
         indicatorTheme?.stopIndicatorWidth ??
@@ -413,6 +436,7 @@ class _WavyLinearProgressIndicatorState
             trackColor: effectiveTrackColor,
             stopIndicatorColor: effectiveStopIndicatorColor,
             strokeWidth: effectiveStrokeWidth,
+            cornerRadius: effectiveCornerRadius,
             stopIndicatorWidth: effectiveStopIndicatorWidth,
             trackGap: effectiveTrackGap,
             amplitude: effectiveAmplitude,
@@ -496,6 +520,7 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
     required this.trackColor,
     required this.stopIndicatorColor,
     required this.strokeWidth,
+    required this.cornerRadius,
     required this.stopIndicatorWidth,
     required this.trackGap,
     required this.amplitude,
@@ -549,6 +574,8 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
 
   final double strokeWidth;
 
+  final double cornerRadius;
+
   final double stopIndicatorWidth;
 
   final double trackGap;
@@ -562,6 +589,26 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
   final ValueListenable<double> waveOffset;
 
   final TextDirection textDirection;
+
+  late final Paint _strokePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = strokeWidth
+    ..strokeCap = _usesStrokeCap(cornerRadius, strokeWidth)
+        ? StrokeCap.round
+        : StrokeCap.butt;
+
+  late final Paint _fillPaint = Paint();
+
+  /// The block which is stamped at the ends of the drawn segments to round
+  /// their corners.
+  late final RRect _endBlockRRect = RRect.fromRectAndRadius(
+    Rect.fromCenter(
+      center: Offset.zero,
+      width: cornerRadius * 2,
+      height: strokeWidth,
+    ),
+    Radius.circular(cornerRadius),
+  );
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -591,6 +638,7 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
       waveOffset: waveOffset.value,
       trackGap: trackGap,
       strokeWidth: strokeWidth,
+      cornerRadius: cornerRadius,
     );
 
     final isRTL = textDirection == TextDirection.rtl;
@@ -605,12 +653,9 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
     // Draw track.
     canvas.drawPath(
       cache.trackPathToDraw,
-      Paint()
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke
-        ..color = trackColor,
+      _strokePaint..color = trackColor,
     );
+    _drawEndBlocks(canvas, cache.trackBlocksToDraw, trackColor);
 
     // Draw a stop indicator.
     if (isDeterminate && value != 1) {
@@ -618,30 +663,55 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
       final maxRadius = strokeWidth / 2;
       final radius = math.min(stopIndicatorWidth / 2, maxRadius);
       final position = Offset(size.width - maxRadius, size.height / 2);
-      canvas.drawCircle(
-        position,
-        radius,
-        Paint()..color = stopIndicatorColor,
-      );
+
+      _fillPaint.color = stopIndicatorColor;
+
+      if (_usesStrokeCap(cornerRadius, strokeWidth)) {
+        canvas.drawCircle(position, radius, _fillPaint);
+      } else {
+        // The corners are rounded by the same ratio as the ones of the active
+        // indicator and the track, so that all of them share the same shape.
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCircle(center: position, radius: radius),
+            Radius.circular(cornerRadius * radius / maxRadius),
+          ),
+          _fillPaint,
+        );
+      }
     }
 
     // Draw the progress.
     final progressPaths = cache.progressPathsToDraw;
     if (progressPaths != null) {
+      _strokePaint.color = color;
       for (final path in progressPaths) {
-        canvas.drawPath(
-          path,
-          Paint()
-            ..strokeWidth = strokeWidth
-            ..strokeCap = StrokeCap.round
-            ..style = PaintingStyle.stroke
-            ..color = color,
-        );
+        canvas.drawPath(path, _strokePaint);
       }
     }
+    _drawEndBlocks(canvas, cache.progressBlocksToDraw, color);
 
     if (isRTL) {
       canvas.restore();
+    }
+  }
+
+  void _drawEndBlocks(Canvas canvas, _EndBlocks blocks, Color color) {
+    if (blocks.length == 0) {
+      return;
+    }
+
+    _fillPaint.color = color;
+
+    for (var i = 0; i < blocks.length; i++) {
+      final block = blocks[i];
+      canvas
+        ..save()
+        ..translate(block.x, block.y)
+        ..rotate(block.rotation)
+        ..scale(block.scale)
+        ..drawRRect(_endBlockRRect, _fillPaint)
+        ..restore();
     }
   }
 
@@ -653,6 +723,7 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
         oldDelegate.trackColor != trackColor ||
         oldDelegate.stopIndicatorColor != stopIndicatorColor ||
         oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.cornerRadius != cornerRadius ||
         oldDelegate.stopIndicatorWidth != stopIndicatorWidth ||
         oldDelegate.trackGap != trackGap ||
         oldDelegate.amplitude != amplitude ||
@@ -660,6 +731,63 @@ class _WavyLinearProgressIndicatorPainter extends CustomPainter {
         oldDelegate.wavelength != wavelength ||
         oldDelegate.waveOffset != waveOffset ||
         oldDelegate.textDirection != textDirection;
+  }
+}
+
+/// Whether the ends of the drawn segments can be rendered with a round
+/// [StrokeCap] instead of the [_EndBlocks].
+bool _usesStrokeCap(double cornerRadius, double strokeWidth) =>
+    cornerRadius >= strokeWidth / 2;
+
+/// A rounded block which is drawn at an end of a progress or a track segment
+/// to round its corners.
+class _EndBlock {
+  double x = 0;
+
+  double y = 0;
+
+  /// The rotation in radians, matching the direction of the segment at this
+  /// end.
+  double rotation = 0;
+
+  /// The uniform scale of the block, used to shrink the segments which are too
+  /// short to hold two blocks.
+  double scale = 1;
+}
+
+/// A pool of [_EndBlock]s which reuses its entries between the updates to keep
+/// the drawing updates allocation free.
+class _EndBlocks {
+  final _blocks = <_EndBlock>[];
+
+  var _length = 0;
+
+  int get length => _length;
+
+  _EndBlock operator [](int index) {
+    assert(index < _length, 'index is out of range.');
+    return _blocks[index];
+  }
+
+  void add({
+    required double x,
+    required double y,
+    double rotation = 0,
+    double scale = 1,
+  }) {
+    if (_length == _blocks.length) {
+      _blocks.add(_EndBlock());
+    }
+
+    _blocks[_length++]
+      ..x = x
+      ..y = y
+      ..rotation = rotation
+      ..scale = scale;
+  }
+
+  void reset() {
+    _length = 0;
   }
 }
 
@@ -682,8 +810,9 @@ class _WavyLinearProgressIndicatorDrawingCache {
 
   var _currentStrokeWidth = 0.0;
 
-  /// The current stroke cap width.
-  var _currentStrokeCapWidth = 0.0;
+  /// The current corner radius, which is also the inset of every segment end
+  /// from the fractional position it represents.
+  var _currentCornerRadius = -1.0;
 
   /// This scale value is used to grab segments from the [_pathMetric] in the
   /// correct length. It holds a value that is the result of dividing the
@@ -707,10 +836,16 @@ class _WavyLinearProgressIndicatorDrawingCache {
   /// A [Path] that represents the track and will be used to draw it.
   final trackPathToDraw = Path();
 
+  /// The blocks that round the ends of the track segments.
+  final trackBlocksToDraw = _EndBlocks();
+
   /// A [Path] that represents the current progress and will be used to draw
   /// it. This path is derived from the [_fullProgressPath] and should be
   /// computed and cached here using the [_pathMetric].
   List<Path>? progressPathsToDraw;
+
+  /// The blocks that round the ends of the progress segments.
+  final progressBlocksToDraw = _EndBlocks();
 
   /// Creates or updates the progress path, and caches it to avoid redundant
   /// updates before updating the draw paths according to the progress.
@@ -729,6 +864,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
     required double waveOffset,
     required double trackGap,
     required double strokeWidth,
+    required double cornerRadius,
   }) {
     assert(wavelength >= 0, 'wavelength must not be negative.');
     assert(
@@ -747,6 +883,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
     );
     assert(trackGap >= 0, 'trackGap must not be negative.');
     assert(strokeWidth > 0, 'strokeWidth has to be greater than zero.');
+    assert(cornerRadius >= 0, 'cornerRadius must not be negative.');
 
     if (_currentProgressFractions == null ||
         _currentProgressFractions!.length != progressFractions.length) {
@@ -765,6 +902,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
       wavelength: wavelength,
       trackGap: trackGap,
       strokeWidth: strokeWidth,
+      cornerRadius: cornerRadius,
     );
     _updateDrawPaths(
       forceUpdate: forceUpdateDrawPaths,
@@ -789,27 +927,26 @@ class _WavyLinearProgressIndicatorDrawingCache {
     required double amplitude,
     required double trackGap,
     required double strokeWidth,
+    required double cornerRadius,
   }) {
     assert(wavelength >= 0, 'wavelength must not be negative.');
     assert(amplitude >= 0, 'amplitude must not be negative.');
     assert(trackGap >= 0, 'trackGap must not be negative.');
     assert(strokeWidth > 0, 'strokeWidth has to be greater than zero.');
+    assert(cornerRadius >= 0, 'cornerRadius must not be negative.');
 
     if (_currentSize == size &&
         _currentWavelength == wavelength &&
         _currentAmplitude == amplitude &&
         _currentTrackGap == trackGap &&
-        _currentStrokeWidth == strokeWidth) {
+        _currentStrokeWidth == strokeWidth &&
+        _currentCornerRadius == cornerRadius) {
       // No update required
       return false;
     }
 
     final height = size.height;
     final width = size.width;
-
-    // Update the stroke width to take into consideration when drawing the
-    // Path.
-    _currentStrokeCapWidth = strokeWidth / 2;
 
     // There are changes that should update the full path.
     _fullProgressPath
@@ -877,6 +1014,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
     _currentAmplitude = amplitude;
     _currentTrackGap = trackGap;
     _currentStrokeWidth = strokeWidth;
+    _currentCornerRadius = cornerRadius;
 
     return true;
   }
@@ -941,7 +1079,13 @@ class _WavyLinearProgressIndicatorDrawingCache {
     final width = _currentSize.width;
     final halfHeight = _currentSize.height / 2;
 
-    final strokeWidth = _currentStrokeCapWidth;
+    final cornerRadius = _currentCornerRadius;
+    final cornerDiameter = cornerRadius * 2;
+    final usesStrokeCap = _usesStrokeCap(cornerRadius, _currentStrokeWidth);
+    // The end blocks are only needed when the round stroke cap can't round the
+    // segment ends on its own.
+    final needsEndBlocks = !usesStrokeCap && cornerRadius > 0;
+
     final trackGapFraction = _currentTrackGap / width;
     final waveShift = waveOffset * _currentWavelength;
 
@@ -981,16 +1125,58 @@ class _WavyLinearProgressIndicatorDrawingCache {
       required double tailFraction,
       required double headFraction,
     }) {
-      final tail = tailFraction * width + strokeWidth;
-      final head = headFraction * width - strokeWidth;
+      final tail = tailFraction * width;
+      final head = headFraction * width;
+      final length = head - tail;
 
-      if (tail > head) {
+      if (length < cornerDiameter) {
+        if (usesStrokeCap || length <= 0) {
+          return;
+        }
+
+        // The segment is too short to hold both of its end blocks, so a single
+        // shrunken block is drawn instead.
+        final shrinkRatio = length / cornerDiameter;
+        trackBlocksToDraw.add(
+          x: tail + cornerRadius * shrinkRatio,
+          y: halfHeight,
+          scale: shrinkRatio,
+        );
         return;
       }
 
+      // The segment is drawn between the centers of its end blocks.
       trackPathsToDraw
-        ..moveTo(tail, halfHeight)
-        ..lineTo(head, halfHeight);
+        ..moveTo(tail + cornerRadius, halfHeight)
+        ..lineTo(head - cornerRadius, halfHeight);
+
+      if (needsEndBlocks) {
+        trackBlocksToDraw
+          ..add(x: tail + cornerRadius, y: halfHeight)
+          ..add(x: head - cornerRadius, y: halfHeight);
+      }
+    }
+
+    // Adds a block to the `progressBlocksToDraw` at the given `distance` along
+    // the `_pathMetric`.
+    void addProgressBlock(double distance, {double scale = 1}) {
+      final tangent = _pathMetric!.getTangentForOffset(distance)!;
+      final position = MatrixUtils.transformPoint(
+        waveTransform,
+        tangent.position,
+      );
+
+      progressBlocksToDraw.add(
+        x: position.dx,
+        y: position.dy,
+        // Only the Y component of the tangent is scaled, because the wave
+        // transform flattens the path along the Y axis alone.
+        rotation: math.atan2(
+          tangent.vector.dy * amplitudeFraction,
+          tangent.vector.dx,
+        ),
+        scale: scale,
+      );
     }
 
     // Updates the path on the `index` position in `progressPathsToDraw`.
@@ -999,32 +1185,51 @@ class _WavyLinearProgressIndicatorDrawingCache {
       required double tailFraction,
       required double headFraction,
     }) {
-      final tail = tailFraction * width + strokeWidth;
-      final head = headFraction * width - strokeWidth;
+      final tail = tailFraction * width;
+      final head = headFraction * width;
+      final length = head - tail;
 
-      if (tail > head) {
+      if (length < cornerDiameter) {
+        if (usesStrokeCap || length <= 0) {
+          return;
+        }
+
+        final shrinkRatio = length / cornerDiameter;
+        addProgressBlock(
+          (tail + cornerRadius * shrinkRatio + waveShift) * _progressPathScale,
+          scale: shrinkRatio,
+        );
         return;
       }
 
-      final path = _pathMetric!.extractPath(
-        (tail + waveShift) * _progressPathScale,
-        (head + waveShift) * _progressPathScale,
-      );
+      final tailDistance =
+          (tail + cornerRadius + waveShift) * _progressPathScale;
+      final headDistance =
+          (head - cornerRadius + waveShift) * _progressPathScale;
+
+      final path = _pathMetric!.extractPath(tailDistance, headDistance);
 
       // Translate and scale the draw path by the wave shift and the
       // amplitude.
       progressPathsToDraw![index] = path.transform(waveTransform.storage);
+
+      if (needsEndBlocks) {
+        addProgressBlock(tailDistance);
+        addProgressBlock(headDistance);
+      }
     }
 
-    // Reset previously set paths.
+    // Reset previously set paths and blocks.
     for (final path in progressPathsToDraw!) {
       path.reset();
     }
     trackPathToDraw.reset();
+    trackBlocksToDraw.reset();
+    progressBlocksToDraw.reset();
 
     if (progressFractions.length == 2) {
       // Determinate progress indicator.
-      final strokeWidthFraction = strokeWidth / width;
+      final cornerDiameterFraction = cornerDiameter / width;
       final effectiveValue = progressFractions[1];
 
       // Track.
@@ -1036,7 +1241,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
                       effectiveValue,
                       trackGapFraction,
                     ),
-                strokeWidthFraction * 2,
+                cornerDiameterFraction,
               )
             : 0.0;
         addTrack(
@@ -1048,7 +1253,7 @@ class _WavyLinearProgressIndicatorDrawingCache {
 
       // Active indicator.
       if (effectiveValue > 0) {
-        final headFraction = math.max(effectiveValue, strokeWidthFraction * 2);
+        final headFraction = math.max(effectiveValue, cornerDiameterFraction);
 
         updateProgressPath(
           index: 0,

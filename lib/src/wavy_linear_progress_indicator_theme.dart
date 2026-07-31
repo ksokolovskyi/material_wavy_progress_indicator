@@ -26,6 +26,7 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
     this.trackColor,
     this.stopIndicatorColor,
     this.strokeWidth,
+    this.cornerRadius,
     this.stopIndicatorWidth,
     this.trackGap,
     this.amplitude,
@@ -34,6 +35,10 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
   }) : assert(
          strokeWidth == null || strokeWidth > 0,
          'strokeWidth has to be greater than zero.',
+       ),
+       assert(
+         cornerRadius == null || cornerRadius >= 0,
+         'cornerRadius must not be negative.',
        ),
        assert(
          stopIndicatorWidth == null || stopIndicatorWidth > 0,
@@ -68,6 +73,9 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
   /// {@macro flutter.material.WavyLinearProgressIndicator.strokeWidth}
   final double? strokeWidth;
 
+  /// {@macro flutter.material.WavyLinearProgressIndicator.cornerRadius}
+  final double? cornerRadius;
+
   /// {@macro flutter.material.WavyLinearProgressIndicator.stopIndicatorWidth}
   final double? stopIndicatorWidth;
 
@@ -90,6 +98,7 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
     Color? trackColor,
     Color? stopIndicatorColor,
     double? strokeWidth,
+    double? cornerRadius,
     double? stopIndicatorWidth,
     double? trackGap,
     double? amplitude,
@@ -101,6 +110,7 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
       trackColor: trackColor ?? this.trackColor,
       stopIndicatorColor: stopIndicatorColor ?? this.stopIndicatorColor,
       strokeWidth: strokeWidth ?? this.strokeWidth,
+      cornerRadius: cornerRadius ?? this.cornerRadius,
       stopIndicatorWidth: stopIndicatorWidth ?? this.stopIndicatorWidth,
       trackGap: trackGap ?? this.trackGap,
       amplitude: amplitude ?? this.amplitude,
@@ -133,6 +143,7 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
         t,
       ),
       strokeWidth: lerpDouble(a?.strokeWidth, b?.strokeWidth, t),
+      cornerRadius: lerpDouble(a?.cornerRadius, b?.cornerRadius, t),
       stopIndicatorWidth: lerpDouble(
         a?.stopIndicatorWidth,
         b?.stopIndicatorWidth,
@@ -151,6 +162,7 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
     trackColor,
     stopIndicatorColor,
     strokeWidth,
+    cornerRadius,
     stopIndicatorWidth,
     trackGap,
     amplitude,
@@ -171,6 +183,7 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
         other.trackColor == trackColor &&
         other.stopIndicatorColor == stopIndicatorColor &&
         other.strokeWidth == strokeWidth &&
+        other.cornerRadius == cornerRadius &&
         other.stopIndicatorWidth == stopIndicatorWidth &&
         other.trackGap == trackGap &&
         other.amplitude == amplitude &&
@@ -192,6 +205,7 @@ class WavyLinearProgressIndicatorThemeData with Diagnosticable {
         ),
       )
       ..add(DoubleProperty('strokeWidth', strokeWidth, defaultValue: null))
+      ..add(DoubleProperty('cornerRadius', cornerRadius, defaultValue: null))
       ..add(
         DoubleProperty(
           'stopIndicatorWidth',
